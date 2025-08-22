@@ -44,6 +44,15 @@ function calculateBonus(index, total, seller) {
 }
 
 /**
+ * Функция для округления чисел до 2 знаков после запятой
+ * @param {number} num
+ * @returns {number}
+ */
+function round2(num) {
+    return Math.round((num + Number.EPSILON) * 100) / 100;
+}
+
+/**
  * Функция для анализа данных продаж
  * @param data
  * @param options
@@ -76,7 +85,7 @@ function analyzeSalesData(data, options) {
         revenue: 0, 
         profit: 0,
         sales_count: 0, 
-        products_sold: {}   // для подсчета товаров
+        products_sold: {}
     }));
 
     const sellerIndex = Object.fromEntries(
@@ -131,14 +140,14 @@ function analyzeSalesData(data, options) {
             .map(([sku, quantity]) => ({ sku, quantity }));
     });
 
-    // 🔥 финальная трансформация к нужному формату
+    // Трансформация в ожидаемый формат
     return sellerStats.map(seller => ({
         seller_id: seller.id,
         name: `${seller.first_name} ${seller.last_name}`,
-        revenue: Number(seller.revenue.toFixed(2)),
-        profit: Number(seller.profit.toFixed(2)),
+        revenue: round2(seller.revenue),
+        profit: round2(seller.profit),
         sales_count: seller.sales_count,
-        bonus: Number(seller.bonus.toFixed(2)),
+        bonus: round2(seller.bonus),
         top_products: seller.top_products
     }));
 }

@@ -20,8 +20,8 @@ function calculateSimpleRevenue(purchase, _product) {
  * @param index порядковый номер в отсортированном массиве
  * @param total общее число продавцов
  * @param seller карточка продавца
- * @returns {number}
- */
+ * @returns {number} */
+
 function calculateBonusByProfit(index, total, seller) {
     const { profit } = seller;
     if (index === 0) {
@@ -57,52 +57,47 @@ function round2(num) {
  * @param data
  * @param options
  * @returns {{revenue, top_products, bonus, name, sales_count, profit, seller_id}[]}
- */function analyzeSalesData(data, options = {}) {
-  if (!data || typeof data !== 'object') throw new Error('Некорректные данные');
-  const { sellers, products, purchase_records } = data;
+ */
 
-  if (!Array.isArray(sellers) || sellers.length === 0) throw new Error('Нет продавцов');
-  if (!Array.isArray(products) || products.length === 0) throw new Error('Нет продуктов');
-  if (!Array.isArray(purchase_records) || purchase_records.length === 0) throw new Error('Нет записей о покупках');
+function analyzeSalesData({ sellers, products, purchase_records }) {
+  if (!sellers || !products || !purchase_records) throw new Error("Missing required data");
+  if (!Array.isArray(sellers) || !Array.isArray(products) || !Array.isArray(purchase_records)) throw new Error("Data must be arrays");
+  if (!sellers.length || !products.length || !purchase_records.length) throw new Error("Arrays cannot be empty");
 
-  const result = sellers.map(seller => {
+  const sellersWithProfit = sellers.map(seller => {
     const sales = purchase_records.filter(r => r.seller_id === seller.seller_id);
-    let revenue = 0;
 
-    const productSalesMap = {};
+    const revenue = sales.reduce((sum, record) => {
+      const product = products.find(p => p.product_id === record.product_id);
+      if (!product) return sum;
+      return sum + calculateSimpleRevenue({ ...record, sale_price: product.price }, product);
+    }, 0);
 
-    for (const sale of sales) {
-      const product = products.find(p => p.product_id === sale.product_id);
-      if (!product) continue;
-
-      const saleRevenue = calculateSimpleRevenue(product, sale.quantity);
-      revenue += saleRevenue;
-
-      if (!productSalesMap[product.product_id]) productSalesMap[product.product_id] = 0;
-      productSalesMap[product.product_id] += sale.quantity;
-    }
-
-    const profit = revenue * 0.085; // пример маржи
-
-    // Важно: передаём объект с profit в calculateBonusByProfit
-    const bonus = calculateBonusByProfit({ ...seller, profit });
-
-    const top_products = Object.entries(productSalesMap)
-      .map(([product_id, quantity]) => ({ product_id, quantity }))
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 5);
+    const profit = revenue; // если прибыль = выручке, или подставь свою логику
 
     return {
-      seller_id: seller.seller_id,
-      name: seller.name,
-      sales_count: sales.length,
+      ...seller,
       revenue: round2(revenue),
       profit: round2(profit),
-      bonus: round2(bonus),
-      top_products
+      sales_count: sales.length,
+      top_products: getTopProducts(sales)
     };
   });
 
-  return result;
+  const totalSellers = sellersWithProfit.length;
+  const sellersWithBonus = sellersWithProfit.map((seller, index) => ({
+    ...seller,
+    bonus: round2(calculateBonusByProfit(index, totalSellers, seller))
+  }));
+
+  return sellersWithBonus;
 }
 
+function getTopProducts(sales) {
+  const grouped = {};
+  sales.forEach(s => grouped[s.product_id] = (grouped[s.product_id] || 0) + s.quantity);
+  return Object.entries(grouped)
+    .sort((a, b) => b[1] - a[1])
+    .map(([product_id, quantity]) => ({ product_id, quantity }))
+    .slice(0, 5);
+}

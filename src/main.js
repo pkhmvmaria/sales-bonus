@@ -49,7 +49,7 @@ function calculateBonus(index, total, seller) {
  * @returns {number}
  */
 function round2(num) {
-    return Math.round((num + Number.EPSILON) * 100) / 100;
+  return Number(num.toFixed(2));
 }
 
 /**
@@ -57,8 +57,7 @@ function round2(num) {
  * @param data
  * @param options
  * @returns {{revenue, top_products, bonus, name, sales_count, profit, seller_id}[]}
- */
-function analyzeSalesData(data, options = {}) {
+ */function analyzeSalesData(data, options = {}) {
   if (!data || typeof data !== 'object') throw new Error('Некорректные данные');
   const { sellers, products, purchase_records } = data;
 
@@ -66,7 +65,6 @@ function analyzeSalesData(data, options = {}) {
   if (!Array.isArray(products) || products.length === 0) throw new Error('Нет продуктов');
   if (!Array.isArray(purchase_records) || purchase_records.length === 0) throw new Error('Нет записей о покупках');
 
-  // Собираем данные по каждому продавцу
   const result = sellers.map(seller => {
     const sales = purchase_records.filter(r => r.seller_id === seller.seller_id);
     let revenue = 0;
@@ -85,15 +83,15 @@ function analyzeSalesData(data, options = {}) {
     }
 
     const profit = revenue * 0.085; // пример маржи
-    const bonus = calculateBonusByProfit(profit);
 
-    // Топ-продукты
+    // Важно: передаём объект с profit в calculateBonusByProfit
+    const bonus = calculateBonusByProfit({ ...seller, profit });
+
     const top_products = Object.entries(productSalesMap)
       .map(([product_id, quantity]) => ({ product_id, quantity }))
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 5);
 
-    // Только здесь округляем перед возвратом
     return {
       seller_id: seller.seller_id,
       name: seller.name,

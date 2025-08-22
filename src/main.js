@@ -4,7 +4,7 @@
  * @param _product карточка товара
  * @returns {number}
  */
-function calculateSimpleRevenue(purchase, _product) {
+function calculateRevenue(purchase, _product) {
     const { sale_price, quantity, discount } = purchase;
     
     if (!discount || discount === 0) {
@@ -22,7 +22,7 @@ function calculateSimpleRevenue(purchase, _product) {
  * @param seller карточка продавца
  * @returns {number}
  */
-function calculateBonusByProfit(index, total, seller) {
+function calculateBonus(index, total, seller) {
     const { profit } = seller;
     if (index === 0) {
         return profit * 0.15;
@@ -46,14 +46,12 @@ function analyzeSalesData(data, options) {
         throw new Error('Некорректные входные данные');
     }
 
-    // ✅ ИЗМЕНИЛ ПРОВЕРКУ - тесты ожидают calculateRevenue и calculateBonus
     if (typeof options !== "object" || options === null ||
         typeof options.calculateRevenue !== "function" || 
         typeof options.calculateBonus !== "function") {
         throw new Error('Чего-то не хватает');
     }
 
-    // ✅ ИЗМЕНИЛ ДЕСТРУКТУРИЗАЦИЮ
     const { calculateRevenue, calculateBonus } = options; 
 
     const sellerStats = data.sellers.map(seller => ({
@@ -84,8 +82,7 @@ function analyzeSalesData(data, options) {
         record.items.forEach(item => {
             const product = productIndex[item.sku];
             if (product) {
-                // ✅ ИЗМЕНИЛ ВЫЗОВ - использу calculateRevenue
-                const itemRevenue = calculateRevenue(item, product); // ← Передаем item и product
+                const itemRevenue = calculateRevenue(item, product);
                 total_amount += itemRevenue;
             }
         });
@@ -96,9 +93,8 @@ function analyzeSalesData(data, options) {
         record.items.forEach(item => {
             const product = productIndex[item.sku];
             if (!product) return;
-            
-            // ✅ ИЗМЕНИЛ ВЫЗОВ - использу calculateRevenue
-            const revenue = calculateRevenue(item, product); // ← Передаем item и product
+        
+            const revenue = calculateRevenue(item, product); 
             const cost = product.purchase_price * item.quantity;
             const itemProfit = revenue - cost;
             
@@ -114,7 +110,6 @@ function analyzeSalesData(data, options) {
     sellerStats.sort((a, b) => b.profit - a.profit);
 
     sellerStats.forEach((seller, index) => {
-        // ✅ ИЗМЕНИЛ ВЫЗОВ - использу calculateBonus
         seller.bonus = calculateBonus(index, sellerStats.length, seller);
         
         seller.top_products = Object.entries(seller.products_sold)

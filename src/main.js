@@ -5,13 +5,15 @@
  * @returns {number}
  */
 
-function calculateSimpleRevenue(amount, discountPercent) {
-    if (!discountPercent || discountPercent === 0) {
-        return amount;
+function calculateSimpleRevenue(purchase, _product) {
+    const { sale_price, quantity, discount } = purchase;
+    
+    if (!discount || discount === 0) {
+        return sale_price * quantity;
     }
     
-    const discount = 1 - (discountPercent / 100);
-    return amount * discount;
+    const discountMultiplier = 1 - (discount / 100);
+    return sale_price * quantity * discountMultiplier;
 }
 
 /**

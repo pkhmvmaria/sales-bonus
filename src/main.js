@@ -58,21 +58,21 @@ function round2(num) {
  * @param options
  * @returns {{revenue, top_products, bonus, name, sales_count, profit, seller_id}[]} */
  
-function analyzeSalesData(data, options = {}) {
-    if (!data) throw new Error("Data is required");
-    const { sellers, products, purchase_records } = data;
+function analyzeSalesData({ sellers, products, purchase_records } = {}) {
+    if (!sellers) throw new Error("Sellers array is required");
+    if (!products) throw new Error("Products array is required");
+    if (!purchase_records) throw new Error("Purchase records array is required");
 
-    if (!Array.isArray(sellers) || sellers.length === 0) throw new Error("Sellers array is required");
-    if (!Array.isArray(products) || products.length === 0) throw new Error("Products array is required");
-    if (!Array.isArray(purchase_records) || purchase_records.length === 0) throw new Error("Purchase records array is required");
+    if (!Array.isArray(sellers) || !sellers.length) throw new Error("Sellers array is empty");
+    if (!Array.isArray(products) || !products.length) throw new Error("Products array is empty");
+    if (!Array.isArray(purchase_records)) throw new Error("Purchase records must be an array");
 
-    // Создаем карту для быстрого доступа к продуктам по SKU
-    const productMap = products.reduce((acc, p) => {
-        acc[p.sku] = p;
-        return acc;
-    }, {});
+    // Создаём быстрый доступ к продуктам по SKU
+    const productMap = {};
+    for (const p of products) {
+        productMap[p.sku] = p;
+    }
 
-    // Считаем продажи для каждого продавца
     const sellerStats = sellers.map(seller => {
         const records = purchase_records.filter(r => r.seller_id === seller.id);
 
@@ -94,18 +94,16 @@ function analyzeSalesData(data, options = {}) {
             productSales[r.sku] += r.quantity;
         }
 
-        // Определяем топ-10 продуктов
         const top_products = Object.entries(productSales)
             .map(([sku, quantity]) => ({ sku, quantity }))
             .sort((a, b) => b.quantity - a.quantity)
             .slice(0, 10);
 
-        // Расчет бонуса
-        const bonus = calculateBonusByProfit(profit);
+        const bonus = calculateBonusByProfit({ profit: profit || 0 });
 
         return {
             seller_id: seller.id,
-            name: `${seller.first_name} ${seller.last_name}`,
+            name: `${seller.first_name || ""} ${seller.last_name || ""}`.trim(),
             revenue: +revenue.toFixed(2),
             profit: +profit.toFixed(2),
             sales_count: records.length,

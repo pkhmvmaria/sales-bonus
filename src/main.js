@@ -54,6 +54,13 @@ function analyzeSalesData(data, options) {
         throw new Error('Некорректные входные данные');
     }
 
+    if (!Array.isArray(data.products) || data.products.length === 0) {
+        throw new Error('Некорректные входные данные');
+    }
+    if (!Array.isArray(data.purchase_records) || data.purchase_records.length === 0) {
+        throw new Error('Некорректные входные данные');
+    }
+
     if (typeof options !== "object" || options === null ||
         typeof options.calculateRevenue !== "function" || 
         typeof options.calculateBonus !== "function") {
@@ -71,7 +78,6 @@ function analyzeSalesData(data, options) {
         revenue: 0, 
         profit: 0,
         sales_count: 0, 
-        products_sold: {},
     }));
 
     const sellerIndex = Object.fromEntries(
@@ -117,7 +123,7 @@ function analyzeSalesData(data, options) {
 
     sellerStats.sort((a, b) => b.profit - a.profit);
 
-    sellerStats.forEach((seller, index) => {
+     sellerStats.forEach((seller, index) => {
         seller.bonus = calculateBonus(index, sellerStats.length, seller);
         
         seller.top_products = Object.entries(seller.products_sold)

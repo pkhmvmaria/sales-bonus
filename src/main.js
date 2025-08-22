@@ -68,49 +68,43 @@ function analyzeSalesData({ sellers, products, purchase_records } = {}) {
     if (!Array.isArray(purchase_records)) throw new Error("Purchase records must be an array");
 
     // Создаём быстрый доступ к продуктам по SKU
-    const productMap = {};
-    for (const p of products) {
-        productMap[p.sku] = p;
-    }
-
-    const sellerStats = sellers.map(seller => {
-        const records = purchase_records.filter(r => r.seller_id === seller.id);
-
-        let revenue = 0;
-        let profit = 0;
-        const productSales = {};
-
-        for (const r of records) {
-            const product = productMap[r.sku];
-            if (!product) continue;
-
-            const recordRevenue = r.quantity * product.price;
-            const recordProfit = r.quantity * (product.price - product.cost);
-
-            revenue += recordRevenue;
-            profit += recordProfit;
-
-            if (!productSales[r.sku]) productSales[r.sku] = 0;
-            productSales[r.sku] += r.quantity;
-        }
-
-        const top_products = Object.entries(productSales)
-            .map(([sku, quantity]) => ({ sku, quantity }))
-            .sort((a, b) => b.quantity - a.quantity)
-            .slice(0, 10);
-
-        const bonus = calculateBonusByProfit({ profit: profit || 0 });
-
-        return {
-            seller_id: seller.id,
-            name: `${seller.first_name || ""} ${seller.last_name || ""}`.trim(),
-            revenue: +revenue.toFixed(2),
-            profit: +profit.toFixed(2),
-            sales_count: records.length,
-            top_products,
-            bonus: +bonus.toFixed(2)
+   // Создаем карту продавцов по id для быстрого доступа
+    const sellersMap = {};
+    sellers.forEach(seller => {
+        sellersMap[seller.id] = {
+            id: seller.id,
+            name: `${seller.first_name} ${seller.last_name}`,
+            revenue: 0,
+            profit: 0
         };
     });
 
-    return sellerStats;
+    // Подсчет выручки и прибыли по продажам
+    purchase_records.forEach(record => {
+        const seller = sellersMap[record.seller_id];
+        if (seller) {
+            const recordRevenue = record.items.reduce(
+                (sum, item) => sum + item.sale_price * item.quantity,
+                0
+            );
+            seller.revenue += recordRevenue;
+            // Прибыль = выручка - скидки
+            const recordProfit = record.items.reduce(
+                (sum, item) => sum + item.sale_price * item.quantity * (1 - item.discount / 100),
+                0
+            );
+            seller.profit += recordProfit;
+        }
+    });
+
+    // Формирование итогового массива продавцов с бонусами
+    const result = Object.values(sellersMap).map(seller => {
+        const bonus = calculateBonusByProfit(seller);
+        return {
+            ...seller,
+            bonus
+        };
+    });
+
+    return result;
 }

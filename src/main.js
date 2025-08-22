@@ -73,12 +73,10 @@ function analyzeSalesData(data, options) {
         id: seller.id,
         first_name: seller.first_name,
         last_name: seller.last_name,
-        start_date: seller.start_date,
-        position: seller.position,
         revenue: 0, 
         profit: 0,
         sales_count: 0, 
-        products_sold: {}   // ✅ добавлено
+        products_sold: {}   // для подсчета товаров
     }));
 
     const sellerIndex = Object.fromEntries(
@@ -133,5 +131,14 @@ function analyzeSalesData(data, options) {
             .map(([sku, quantity]) => ({ sku, quantity }));
     });
 
-    return sellerStats;
+    // 🔥 финальная трансформация к нужному формату
+    return sellerStats.map(seller => ({
+        seller_id: seller.id,
+        name: `${seller.first_name} ${seller.last_name}`,
+        revenue: Number(seller.revenue.toFixed(2)),
+        profit: Number(seller.profit.toFixed(2)),
+        sales_count: seller.sales_count,
+        bonus: Number(seller.bonus.toFixed(2)),
+        top_products: seller.top_products
+    }));
 }

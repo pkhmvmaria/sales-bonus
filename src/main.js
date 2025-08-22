@@ -58,70 +58,50 @@ function round2(num) {
  * @param options
  * @returns {{revenue, top_products, bonus, name, sales_count, profit, seller_id}[]}
  */
-
-function analyzeSalesData({ sellers, products, purchase_records }, options = {}) {
+function analyzeSalesData(data, options) {
   // Проверка обязательных данных
-  if (!sellers || !products || !purchase_records) {
-    throw new Error('Отсутствуют обязательные данные');
-  }
+  if (!data) throw new Error('Отсутствуют данные');
+  const { sellers, products, purchase_records } = data;
+  if (!sellers) throw new Error('Отсутствует sellers');
+  if (!products) throw new Error('Отсутствует products');
+  if (!purchase_records) throw new Error('Отсутствуют purchase_records');
+  if (!Array.isArray(sellers) || sellers.length === 0) throw new Error('Пустой массив sellers');
+  if (!Array.isArray(products) || products.length === 0) throw new Error('Пустой массив products');
+  if (!Array.isArray(purchase_records) || purchase_records.length === 0) throw new Error('Пустой массив purchase_records');
 
-  // Проверка формата данных
-  if (!Array.isArray(sellers) || !Array.isArray(products) || !Array.isArray(purchase_records)) {
-    throw new Error('Некорректный формат данных');
-  }
-
-  // Проверка на пустые массивы
-  if (sellers.length === 0) throw new Error('Массив sellers пуст');
-  if (products.length === 0) throw new Error('Массив products пуст');
-
-  // Проверка корректности опций
-  if (options && typeof options !== 'object') {
+  // Проверка опций
+  if (!options || typeof options.calculateRevenue !== 'function' || typeof options.calculateBonus !== 'function') {
     throw new Error('Некорректные опции');
   }
-  if ('calculateBonus' in options && typeof options.calculateBonus !== 'function') {
-    throw new Error('calculateBonus должен быть функцией');
-  }
 
+  // Анализ по каждому продавцу
   return sellers.map(seller => {
+    // Все записи продаж данного продавца
     const records = purchase_records.filter(r => r.seller_id === seller.id);
 
-    const revenue = records.reduce((sum, record) => {
-      const product = products.find(p => p.sku === record.sku);
-      if (!product) return sum;
-      return sum + product.sale_price * record.quantity;
-    }, 0);
+    // Вычисление выручки
+    const revenue = options.calculateRevenue(records, products);
 
+    // Вычисление прибыли
     const profit = records.reduce((sum, record) => {
       const product = products.find(p => p.sku === record.sku);
       if (!product) return sum;
       return sum + (product.sale_price - product.purchase_price) * record.quantity;
     }, 0);
 
-    const bonus = options.calculateBonus ? options.calculateBonus(profit) : 0;
+    // Вычисление бонуса
+    const bonus = options.calculateBonus({ ...seller, profit });
 
-    const sales_count = records.reduce((sum, r) => sum + r.quantity, 0);
-
+    // Топ-продукты по выручке
     const top_products = records
-      .reduce((acc, r) => {
-        const existing = acc.find(p => p.sku === r.sku);
-        if (existing) existing.quantity += r.quantity;
-        else acc.push({ sku: r.sku, quantity: r.quantity });
-        return acc;
-      }, [])
-      .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 10);
+      .map(record => {
+        const product = products.find(p => p.sku === record.sku);
+        return product ? { ...product, revenue: product.sale_price * record.quantity } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 3);
 
-    return {
-      id: seller.id,
-      first_name: seller.first_name,
-      last_name: seller.last_name,
-      position: seller.position,
-      start_date: seller.start_date,
-      revenue,
-      profit,
-      bonus,
-      sales_count,
-      top_products
-    };
+    return { ...seller, revenue, profit, bonus, top_products };
   });
 }

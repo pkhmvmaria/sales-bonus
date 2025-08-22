@@ -58,56 +58,57 @@ function round2(num) {
  * @param options
  * @returns {{revenue, top_products, bonus, name, sales_count, profit, seller_id}[]}
  */
-function analyzeSalesData(data, options = {}) {
-  if (!data || typeof data !== 'object') throw new Error('Некорректные данные');
 
-  const { sellers, products, purchase_records } = data;
+function analyzeSalesData({ sellers, products, purchase_records }, options = {}) {
+  if (!sellers || !products || !purchase_records) {
+    throw new Error('Отсутствуют обязательные данные');
+  }
 
-  if (!Array.isArray(sellers)) throw new Error('Нет продавцов');
-  if (!Array.isArray(products)) throw new Error('Нет продуктов');
-  if (!Array.isArray(purchase_records)) throw new Error('Нет записей покупок');
-  if (sellers.length === 0) throw new Error('Нет продавцов');
-  if (products.length === 0) throw new Error('Нет продуктов');
-  if (purchase_records.length === 0) throw new Error('Нет записей покупок');
-
-  const calculateRevenue = options.calculateRevenue || calculateSimpleRevenue;
-  const calculateBonus = options.calculateBonus || calculateBonusByProfit;
+  if (!Array.isArray(sellers) || !Array.isArray(products) || !Array.isArray(purchase_records)) {
+    throw new Error('Некорректный формат данных');
+  }
 
   return sellers.map(seller => {
-    // все продажи этого продавца
-    const sales = purchase_records.filter(p => p.seller_id === seller.id);
+    const records = purchase_records.filter(r => r.seller_id === seller.id);
 
-    // расчет дохода
-    const revenue = calculateRevenue(sales, products);
-    // расчет прибыли
-    const profit = sales.reduce((sum, sale) => {
-      const product = products.find(p => p.sku === sale.sku);
-      return sum + (product.price - product.cost) * sale.quantity;
+    const revenue = records.reduce((sum, record) => {
+      const product = products.find(p => p.sku === record.sku);
+      if (!product) return sum; // если продукт не найден
+      return sum + product.sale_price * record.quantity;
     }, 0);
-    // расчет бонуса
-    const bonus = calculateBonus(profit);
 
-    // топ-продукты по количеству продаж
-    const top_products = sales
-      .reduce((acc, sale) => {
-        const existing = acc.find(p => p.sku === sale.sku);
-        if (existing) {
-          existing.quantity += sale.quantity;
-        } else {
-          acc.push({ sku: sale.sku, quantity: sale.quantity });
-        }
+    const profit = records.reduce((sum, record) => {
+      const product = products.find(p => p.sku === record.sku);
+      if (!product) return sum;
+      return sum + (product.sale_price - product.purchase_price) * record.quantity;
+    }, 0);
+
+    const bonus = options.calculateBonus
+      ? options.calculateBonus(profit)
+      : 0;
+
+    const sales_count = records.reduce((sum, r) => sum + r.quantity, 0);
+
+    const top_products = records
+      .reduce((acc, r) => {
+        const existing = acc.find(p => p.sku === r.sku);
+        if (existing) existing.quantity += r.quantity;
+        else acc.push({ sku: r.sku, quantity: r.quantity });
         return acc;
       }, [])
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10);
 
     return {
-      seller_id: seller.id,
-      name: `${seller.first_name} ${seller.last_name}`,
+      id: seller.id,
+      first_name: seller.first_name,
+      last_name: seller.last_name,
+      position: seller.position,
+      start_date: seller.start_date,
       revenue,
       profit,
       bonus,
-      sales_count: sales.length,
+      sales_count,
       top_products
     };
   });

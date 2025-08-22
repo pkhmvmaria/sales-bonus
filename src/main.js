@@ -60,12 +60,26 @@ function round2(num) {
  */
 
 function analyzeSalesData({ sellers, products, purchase_records }, options = {}) {
+  // Проверка обязательных данных
   if (!sellers || !products || !purchase_records) {
     throw new Error('Отсутствуют обязательные данные');
   }
 
+  // Проверка формата данных
   if (!Array.isArray(sellers) || !Array.isArray(products) || !Array.isArray(purchase_records)) {
     throw new Error('Некорректный формат данных');
+  }
+
+  // Проверка на пустые массивы
+  if (sellers.length === 0) throw new Error('Массив sellers пуст');
+  if (products.length === 0) throw new Error('Массив products пуст');
+
+  // Проверка корректности опций
+  if (options && typeof options !== 'object') {
+    throw new Error('Некорректные опции');
+  }
+  if ('calculateBonus' in options && typeof options.calculateBonus !== 'function') {
+    throw new Error('calculateBonus должен быть функцией');
   }
 
   return sellers.map(seller => {
@@ -73,7 +87,7 @@ function analyzeSalesData({ sellers, products, purchase_records }, options = {})
 
     const revenue = records.reduce((sum, record) => {
       const product = products.find(p => p.sku === record.sku);
-      if (!product) return sum; // если продукт не найден
+      if (!product) return sum;
       return sum + product.sale_price * record.quantity;
     }, 0);
 
@@ -83,9 +97,7 @@ function analyzeSalesData({ sellers, products, purchase_records }, options = {})
       return sum + (product.sale_price - product.purchase_price) * record.quantity;
     }, 0);
 
-    const bonus = options.calculateBonus
-      ? options.calculateBonus(profit)
-      : 0;
+    const bonus = options.calculateBonus ? options.calculateBonus(profit) : 0;
 
     const sales_count = records.reduce((sum, r) => sum + r.quantity, 0);
 

@@ -35,6 +35,14 @@ function calculateBonusByProfit(index, total, seller) {
     }
 }
 
+function calculateRevenue(purchase, _product) {
+    return calculateSimpleRevenue(purchase, _product);
+}
+
+function calculateBonus(index, total, seller) {
+    return calculateBonusByProfit(index, total, seller);
+}
+
 /**
  * Функция для анализа данных продаж
  * @param data

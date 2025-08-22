@@ -4,7 +4,7 @@
  * @param _product карточка товара
  * @returns {number}
  */
-function calculateRevenue(purchase, _product) {
+function calculateSimpleRevenue(purchase, _product) {
     const { sale_price, quantity, discount } = purchase;
     
     if (!discount || discount === 0) {
@@ -22,7 +22,7 @@ function calculateRevenue(purchase, _product) {
  * @param seller карточка продавца
  * @returns {number}
  */
-function calculateBonus(index, total, seller) {
+function calculateBonusByProfit(index, total, seller) {
     const { profit } = seller;
     if (index === 0) {
         return profit * 0.15;

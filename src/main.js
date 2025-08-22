@@ -75,7 +75,7 @@ function analyzeSalesData({ sellers, products, purchase_records } = {}) {
             id: seller.id,
             name: `${seller.first_name} ${seller.last_name}`,
             revenue: 0,
-            profit: 0
+            profit: 0,
         };
     });
 

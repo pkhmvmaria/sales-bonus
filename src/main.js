@@ -6,6 +6,10 @@
  */
 
 function calculateSimpleRevenue(amount, discountPercent) {
+    if (!discountPercent || discountPercent === 0) {
+        return amount;
+    }
+    
     const discount = 1 - (discountPercent / 100);
     return amount * discount;
 }
